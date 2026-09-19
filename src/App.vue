@@ -131,22 +131,10 @@
 
       <!-- ==================== INVENTARIO INSUMOS ==================== -->
       <section v-if="sec === 'inventario'" class="fade-up">
-        <div class="balance verde">
+                <div class="balance verde">
           <div class="lbl"><icon name="package" :size="14" color="#fff"></icon> Valor del Inventario</div>
           <div class="val">{{ fmt(valorInsumos) }}</div>
           <div class="sub">{{ insumosActivos.length }} insumos · {{ lotesActivos.length }} lotes</div>
-        </div>
-
-        <div class="card">
-          <div class="card-title"><icon name="package" :size="18" color="#D97706"></icon> Insumos</div>
-          <div v-if="insumosActivos.length === 0" class="empty">Sin insumos</div>
-          <div v-for="i in insumosActivos" :key="i.id" class="item">
-            <div class="info">
-              <div class="nm">{{ i.nombre }}</div>
-              <div class="det">Stock: {{ fmtCant(stockInsumo(i.id)) }} {{ i.unidad }} · Mín: {{ fmtCant(i.stockMinimo) }}</div>
-            </div>
-            <span class="badge" :class="badgeStockInsumo(i)">{{ txtBadgeInsumo(i) }}</span>
-          </div>
         </div>
 
         <div class="card">
@@ -165,6 +153,18 @@
           <input v-model="insumoForm.stockMinimo" type="number" inputmode="decimal" placeholder="Stock mínimo">
           <input v-model="insumoForm.pesoEnvase" type="number" inputmode="decimal" placeholder="Peso envase (opcional)">
           <button class="btn pri" @click="guardarInsumo()">Guardar Insumo</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><icon name="package" :size="18" color="#D97706"></icon> Insumos</div>
+          <div v-if="insumosActivos.length === 0" class="empty">Sin insumos</div>
+          <div v-for="i in insumosActivos" :key="i.id" class="item">
+            <div class="info">
+              <div class="nm">{{ i.nombre }}</div>
+              <div class="det">Stock: {{ fmtCant(stockInsumo(i.id)) }} {{ i.unidad }} · Mín: {{ fmtCant(i.stockMinimo) }}</div>
+            </div>
+            <span class="badge" :class="badgeStockInsumo(i)">{{ txtBadgeInsumo(i) }}</span>
+          </div>
         </div>
       </section>
 

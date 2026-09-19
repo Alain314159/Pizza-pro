@@ -109,6 +109,9 @@
 <script>
 export default {
   name: 'SeccionSocios',
-  inject: ['$app']
+  inject: ['$app'],
+  computed: {
+    app() { return this.$app; }
+  }
 };
 </script>
