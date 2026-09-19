@@ -2,3 +2,5 @@
 
 # Archivos de backup temporales
 *.bak*
+
+node_modules/

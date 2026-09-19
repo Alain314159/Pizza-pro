@@ -8,7 +8,7 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png'],
+      includeAssets: ['favicon.svg', 'icons/icon.svg', 'icons/icon-maskable.svg'],
       manifest: {
         id: '/Pizza-pro/',
         name: 'Pizza Pro',
@@ -23,14 +23,13 @@ export default defineConfig({
         start_url: '/Pizza-pro/',
         categories: ['business', 'food', 'productivity'],
         icons: [
-          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          { src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml' },
+          { src: 'icons/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' }
         ],
         shortcuts: [
-          { name: 'Nueva Venta', short_name: 'Venta', url: '/Pizza-pro/#ventas', icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
-          { name: 'Registrar Baja', short_name: 'Baja', url: '/Pizza-pro/#bajas', icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] },
-          { name: 'Auditoria', short_name: 'Auditoria', url: '/Pizza-pro/#auditoria', icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }] }
+          { name: 'Nueva Venta', short_name: 'Venta', url: '/Pizza-pro/#ventas', icons: [{ src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml' }] },
+          { name: 'Registrar Baja', short_name: 'Baja', url: '/Pizza-pro/#bajas', icons: [{ src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml' }] },
+          { name: 'Auditoria', short_name: 'Auditoria', url: '/Pizza-pro/#auditoria', icons: [{ src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml' }] }
         ]
       },
       workbox: {
