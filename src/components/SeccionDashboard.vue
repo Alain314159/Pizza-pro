@@ -89,9 +89,8 @@ export default {
           const d = dias.find(x => x.fecha === dia);
           if (d) d.v += Number(v.total) || 0;
         });
-        const dark = this.app.cfg.tema === 'dark';
-        const txt = dark ? '#9CA3AF' : '#6B7280';
-        const grid = dark ? '#4B5563' : '#E5E7EB';
+        const txt = '#6B7280';
+        const grid = '#E5E7EB';
         this._chart = new Chart(cv.getContext('2d'), {
           type: 'bar',
           data: {

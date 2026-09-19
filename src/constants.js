@@ -17,7 +17,8 @@ export const MOTIVOS_BAJA = [
 export const UNIDADES = [
   { value: 'g', label: 'Gramos (g)' },
   { value: 'ml', label: 'Mililitros (ml)' },
-  { value: 'u', label: 'Unidades (u)' }
+  { value: 'u', label: 'Unidades (u)' },
+  { value: 'lb', label: 'Libras (lb)' }
 ];
 
 export const CATEGORIAS_INSUMO = [

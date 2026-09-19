@@ -18,7 +18,9 @@ export default {
 
   methods: {
     tgTokenActual() {
-      return this.cfg.tgChatId ? 'proxy' : '';
+      // El proxy no requiere token del cliente. Antes devolvía ''
+      // cuando no había chatId, lo que rompía la auto-detección inicial.
+      return 'proxy';
     },
 
     async comprimirGzip(blob) {

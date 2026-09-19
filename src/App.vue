@@ -11,9 +11,6 @@
     <header class="header no-print">
       <h1><icon name="fire" :size="20" color="#fff"></icon> {{ cfg.nombre || 'Pizza Pro' }}</h1>
       <div class="hacts">
-        <button class="h-btn" @click="toggleTema()">
-          <icon :name="cfg.tema === 'dark' ? 'sun' : 'moon'" :size="18" color="#fff"></icon>
-        </button>
         <button class="h-btn" @click="ajustesAbierto = true">
           <icon name="settings" :size="18" color="#fff"></icon>
         </button>
@@ -159,6 +156,7 @@
             <option value="g">Gramos (g)</option>
             <option value="ml">Mililitros (ml)</option>
             <option value="u">Unidades (u)</option>
+            <option value="lb">Libras (lb)</option>
           </select>
           <select v-model="insumoForm.categoria">
             <option value="">Categoría...</option>
@@ -519,7 +517,8 @@ export default {
       _chart: null,
       _stockCache: null,
       storagePersistente: false,
-      storageInfo: { uso: 0, cuota: 0, porcentaje: 0 }
+      storageInfo: { uso: 0, cuota: 0, porcentaje: 0 },
+      txtColor: '#1F2937'
     };
   },
 
@@ -698,12 +697,6 @@ export default {
       this.toast = { show: true, msg, type, accionTxt, accionFn, timer: null };
       vib(type === 'ok' ? 20 : 40);
       this.toast.timer = setTimeout(() => { this.toast.show = false; }, accionTxt ? 5000 : 3000);
-    },
-
-    toggleTema() {
-      this.cfg.tema = this.cfg.tema === 'dark' ? 'light' : 'dark';
-      try { document.documentElement.setAttribute('data-theme', this.cfg.tema); } catch (e) {}
-      this.guardarCfg();
     },
 
     ir(s) {
@@ -1346,9 +1339,6 @@ export default {
   },
 
   watch: {
-    'cfg.tema'(t) {
-      try { document.documentElement.setAttribute('data-theme', t); } catch (e) {}
-    },
     'arqueoForm.monto'() {
       this.calcArqueo();
     }

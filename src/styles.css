@@ -1,6 +1,7 @@
 [v-cloak] { display: none !important; }
 
 :root {
+  color-scheme: light;
   --pri: #D97706;
   --pri-d: #B45309;
   --pri-l: #F59E0B;
@@ -10,10 +11,10 @@
   --warn-d: #D97706;
   --bad: #EF4444;
   --bad-d: #DC2626;
-  --bg: #FEF3C7;
-  --bg-2: #FDE68A;
-  --card: #FFFFFF;
-  --card-2: #FFFBEB;
+  --bg: #FAF2E0;
+  --bg-2: #F3E7CC;
+  --card: #FEFCF5;
+  --card-2: #F9F3E3;
   --txt: #1F2937;
   --txt-2: #4B5563;
   --mut: #6B7280;
@@ -32,18 +33,6 @@
   --tr-bounce: .35s cubic-bezier(.34,1.56,.64,1);
 }
 
-[data-theme="dark"] {
-  --bg: #1F2937;
-  --bg-2: #374151;
-  --card: #374151;
-  --card-2: #4B5563;
-  --txt: #F9FAFB;
-  --txt-2: #D1D5DB;
-  --mut: #9CA3AF;
-  --brd: #4B5563;
-  --brd-2: #6B7280;
-  --sh-pri: 0 4px 14px rgba(217,119,6,.45);
-}
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html { scroll-behavior: smooth; }
@@ -87,7 +76,6 @@ main { padding: .85rem .8rem 6.5rem; max-width: 42rem; margin: 0 auto; }
   gap: .55rem; margin-bottom: .95rem; font-size: 1rem;
 }
 .card-title svg { padding: .35rem; background: rgba(217,119,6,.1); border-radius: var(--r-xs); box-sizing: content-box; }
-[data-theme="dark"] .card-title svg { background: rgba(217,119,6,.2); }
 
 /* BALANCE */
 .balance {
@@ -161,7 +149,6 @@ input::placeholder, textarea::placeholder { color: var(--mut-2); }
   backdrop-filter: blur(20px) saturate(180%);
   background-color: rgba(255,255,255,.88);
 }
-[data-theme="dark"] .nav { background-color: rgba(55,65,81,.88); }
 .nav button {
   flex: 1; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 3px; background: none; border: none;
@@ -245,8 +232,6 @@ input::placeholder, textarea::placeholder { color: var(--mut-2); }
 .row.total { font-weight: 800; font-size: 1rem; border-top: 2px solid var(--txt); border-bottom: none; margin-top: .35rem; padding-top: .7rem; }
 .pos { color: var(--ok-d); font-weight: 700; }
 .neg { color: var(--bad-d); font-weight: 700; }
-[data-theme="dark"] .pos { color: #4ADE80; }
-[data-theme="dark"] .neg { color: #F87171; }
 .empty { text-align: center; color: var(--mut); padding: 2rem 1rem; font-size: .88rem; }
 .empty::before { content: '○'; display: block; font-size: 2.5rem; opacity: .3; margin-bottom: .5rem; }
 
