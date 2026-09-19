@@ -406,11 +406,6 @@
         </div>
       </section>
 
-      <!-- ==================== SOCIOS ==================== -->
-      <section v-if="sec === 'socios'" class="fade-up">
-        <SeccionSocios />
-      </section>
-
       <!-- ==================== REPORTES ==================== -->
       <section v-if="sec === 'reportes'" class="fade-up">
         <div class="card">
@@ -485,10 +480,6 @@
       </div>
     </div>
 
-    <!-- MODALES DE SOCIOS -->
-    <ModalRetiro />
-    <ModalAporte />
-
     <!-- CONFIRM / PROMPT -->
     <ModalConfirm :activo="confirm.activo" :titulo="confirm.titulo" :msg="confirm.msg" @ok="okConfirm" @cancelar="confirm.activo = false" />
     <ModalPrompt :activo="prompt.activo" :titulo="prompt.titulo" :msg="prompt.msg" :placeholder="prompt.placeholder" :type="prompt.type" :value="prompt.value" @update:value="prompt.value = $event" @ok="okPrompt" @cancelar="cancelPrompt" />
@@ -506,15 +497,10 @@ import SheetMas from './components/SheetMas.vue';
 import ModalConfirm from './components/ModalConfirm.vue';
 import ModalPrompt from './components/ModalPrompt.vue';
 import AppToast from './components/AppToast.vue';
-import SeccionSocios from './components/SeccionSocios.vue';
-import ModalRetiro from './components/ModalRetiro.vue';
-import ModalAporte from './components/ModalAporte.vue';
-import sociosMixin from './mixins/socios.js';
 
 export default {
   name: 'App',
-  mixins: [sociosMixin],
-  components: { BottomNav, SheetMas, ModalConfirm, ModalPrompt, AppToast, SeccionSocios, ModalRetiro, ModalAporte },
+  components: { BottomNav, SheetMas, ModalConfirm, ModalPrompt, AppToast },
 
   data() {
     return {
@@ -739,7 +725,7 @@ export default {
     },
 
     masActivo() {
-      return this.masAbierto || ['bajas','auditoria','productos','gastos','reportes','caja','socios'].includes(this.sec);
+      return this.masAbierto || ['bajas','auditoria','productos','gastos','reportes','caja'].includes(this.sec);
     }
   },
 
@@ -1273,18 +1259,14 @@ export default {
         gastos: () => db.gastos.toArray(),
         movCaja: () => db.movCaja.toArray(),
         arqueos: () => db.arqueos.toArray(),
-        auditorias: () => db.auditorias.toArray(),
-        socios: () => db.socios.toArray(),
-        distribuciones: () => db.distribuciones.toArray(),
-        capital: () => db.capital.toArray(),
-        retiros: () => db.retiros.toArray()
+        auditorias: () => db.auditorias.toArray()
       };
       for (const w of what) this[w] = await map[w]();
       this._stockCache = null;
     },
 
     async recargarTodo() {
-      const tables = ['insumos','lotesInsumo','productos','ventas','compras','bajas','gastos','movCaja','arqueos','auditorias','socios','distribuciones','capital','retiros'];
+      const tables = ['insumos','lotesInsumo','productos','ventas','compras','bajas','gastos','movCaja','arqueos','auditorias'];
       let r;
       await db.transaction('r', tables.map(t => db.table(t)), async () => {
         r = await Promise.all(tables.map(t => db.table(t).toArray()));
@@ -1395,7 +1377,7 @@ export default {
         } catch (e) {}
         await this.recargarTodo();
         const hash = location.hash.slice(1);
-        const valid = ['dashboard','ventas','compras','inventario','bajas','productos','auditoria','caja','gastos','reportes','socios'];
+        const valid = ['dashboard','ventas','compras','inventario','bajas','productos','auditoria','caja','gastos','reportes'];
         if (valid.includes(hash)) this.sec = hash;
       } catch (e) {
         console.error(e);
@@ -1414,10 +1396,6 @@ export default {
     'arqueoForm.monto'() {
       this.calcArqueo();
     }
-  },
-
-  provide() {
-    return { $app: this };
   },
 
   mounted() {

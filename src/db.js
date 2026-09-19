@@ -16,9 +16,26 @@ db.version(1).stores({
   config: 'key'
 });
 
+db.version(2).stores({
+  insumos: 'id, nombre, categoria, archivado',
+  lotesInsumo: 'id, insumoId, compraId, fecha, [insumoId+fecha]',
+  productos: 'id, nombre, archivado',
+  ventas: 'id, fecha, anulada',
+  compras: 'id, insumoId, fecha',
+  bajas: 'id, productoId, fecha, motivo',
+  gastos: 'id, fecha, categoria',
+  movCaja: 'id, fecha, tipo',
+  arqueos: 'id, fecha',
+  auditorias: 'id, fecha, estado',
+  socios: 'id, nombre, activo',
+  distribuciones: 'id, fecha, socioId',
+  capital: 'id, fecha, socioId',
+  retiros: 'id, fecha',
+  config: 'key'
+});
+
 if (typeof window !== 'undefined') window.db = db;
 
-// ============ HELPERS NUMERICOS ============
 export const n = v => { const x = parseFloat(v); return isNaN(x) ? 0 : x; };
 export const m = v => Math.round((n(v) + Number.EPSILON) * 10000) / 10000;
 export const q = v => Math.round((n(v) + Number.EPSILON) * 10000) / 10000;
@@ -56,7 +73,7 @@ export function fmtFH(iso) {
 
 export function buildData(state) {
   return clean({
-    version: 1,
+    version: 2,
     fecha: new Date().toISOString(),
     cfg: state.cfg,
     insumos: state.insumos,
@@ -68,6 +85,10 @@ export function buildData(state) {
     gastos: state.gastos,
     movCaja: state.movCaja,
     arqueos: state.arqueos,
-    auditorias: state.auditorias
+    auditorias: state.auditorias,
+    socios: state.socios,
+    distribuciones: state.distribuciones,
+    capital: state.capital,
+    retiros: state.retiros
   });
 }
