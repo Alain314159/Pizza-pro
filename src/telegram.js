@@ -2,7 +2,7 @@
 // El token del bot NUNCA se incluye en el bundle.
 
 export const TG_PROXY_URL = 'https://pizza-proxy.tienda-ul5r2q.workers.dev';
-export const TG_APP_KEY = 'CAMBIAR_POR_APP_KEY_DE_PIZZA_PROXY';
+export const TG_APP_KEY = 'f03e3e46f4454562962de0acf49ca295';
 
 function proxyHeaders(extra) {
   const h = { 'X-App-Key': TG_APP_KEY };

@@ -22,9 +22,59 @@
 
     <main @touchstart.passive="onTouchStart" @touchmove.passive="onTouchMove" @touchend="onTouchEnd">
       <!-- ==================== DASHBOARD ==================== -->
-      <!-- ==================== DASHBOARD ==================== -->
       <section v-if="sec === 'dashboard'" class="fade-up">
-        <SeccionDashboard />
+        <div class="balance azul">
+          <div class="lbl"><icon name="wallet" :size="14" color="#fff"></icon> Efectivo en Caja</div>
+          <div class="val">{{ fmt(saldoCaja) }}</div>
+          <div class="sub">Insumos: {{ fmt(valorInsumos) }} · Desde {{ fmtFecha(cfg.periodoInicio) }}</div>
+        </div>
+
+        <div v-if="insumosBajoStock.length" class="alert-box-stock">
+          <div class="alert-chip alert-low" @click="ir('inventario')">
+            <icon name="alert" :size="14" color="#fff"></icon>
+            <b>{{ insumosBajoStock.length }}</b> insumo(s) bajo(s)
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="stat">
+            <div class="lbl"><icon name="cart" :size="12"></icon> Pizzas vendidas</div>
+            <div class="val" style="color:var(--pri)">{{ pizzasVendidasPeriodo }}</div>
+          </div>
+          <div class="stat">
+            <div class="lbl"><icon name="dollar" :size="12"></icon> Ganancia neta</div>
+            <div class="val" :class="gananciaNetaPeriodo >= 0 ? 'pos' : 'neg'">{{ fmt(gananciaNetaPeriodo) }}</div>
+          </div>
+          <div class="stat">
+            <div class="lbl"><icon name="trend" :size="12"></icon> Ventas</div>
+            <div class="val">{{ fmt(ventasPeriodo) }}</div>
+          </div>
+          <div class="stat">
+            <div class="lbl"><icon name="x" :size="12"></icon> Bajas</div>
+            <div class="val neg">{{ bajasPeriodo }}</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:.8rem">
+          <div class="card-title"><icon name="zap" :size="18" color="#D97706"></icon> Accesos rápidos</div>
+          <div class="quick-grid">
+            <button class="quick-btn" @click="ir('ventas')"><icon name="cart" :size="22"></icon>Nueva Venta</button>
+            <button class="quick-btn" @click="ir('bajas')"><icon name="x" :size="22"></icon>Registrar Baja</button>
+            <button class="quick-btn" @click="ir('compras')"><icon name="bag" :size="22"></icon>Compra Insumo</button>
+            <button class="quick-btn" @click="ir('auditoria')"><icon name="check" :size="22"></icon>Auditoría</button>
+          </div>
+        </div>
+
+        <div class="card" v-if="insumosBajoStock.length">
+          <div class="card-title"><icon name="alert" :size="18" color="#D97706"></icon> Insumos bajo stock</div>
+          <div v-for="i in insumosBajoStock" :key="i.id" class="item">
+            <div class="info">
+              <div class="nm">{{ i.nombre }}</div>
+              <div class="det">Stock: {{ fmtCant(stockInsumo(i.id)) }} {{ i.unidad }} · Mín: {{ fmtCant(i.stockMinimo) }}</div>
+            </div>
+            <span class="badge low">BAJO</span>
+          </div>
+        </div>
       </section>
 
       <!-- ==================== VENTAS ==================== -->
@@ -390,11 +440,54 @@
     <!-- SHEET MAS -->
     <SheetMas :abierto="masAbierto" :sec="sec" @cerrar="masAbierto = false" @ir="ir" @abrir-ajustes="masAbierto = false; ajustesAbierto = true" />
 
-    <!-- AJUSTES -->
-    <SeccionAjustes v-if="ajustesAbierto" @cerrar="ajustesAbierto = false" />
+    <!-- MODAL AJUSTES -->
+    <div v-if="ajustesAbierto" class="modal no-print" @click.self="ajustesAbierto = false">
+      <div class="modal-box" @click.stop>
+        <div class="modal-title"><icon name="settings" :size="20"></icon> Ajustes</div>
 
-    <!-- COBRO -->
-    <ModalCobro />
+        <div class="set-group">Tienda</div>
+        <div class="set-row">
+          <span class="lbl">Nombre</span>
+          <input v-model="cfg.nombre" type="text" style="width:auto;flex:1;margin:0;padding:.4rem .6rem" @change="guardarCfg">
+        </div>
+        <div class="set-row">
+          <span class="lbl">Capital inicial</span>
+          <input :value="cfg.capitalInicial || 0" @change="setCapitalInicial($event.target.value)" type="number" style="width:auto;flex:1;margin:0;padding:.4rem .6rem">
+        </div>
+
+        <div class="set-group">Alertas</div>
+        <div class="set-row">
+          <span class="lbl">Umbral merma (%)</span>
+          <input v-model.number="cfg.umbralMermaPct" type="number" min="1" max="100" style="width:5rem;margin:0;padding:.3rem .5rem" @change="guardarCfg">
+        </div>
+
+        <div class="set-group">Datos</div>
+        <button class="btn pri" @click="exportar">Exportar respaldo (JSON)</button>
+        <button class="btn ghost" @click="triggerImport">Importar datos</button>
+        <input type="file" id="impFile" accept=".json" style="display:none" @change="onImportFile">
+
+        <div class="set-group">Zona peligrosa</div>
+        <button class="btn bad" @click="borrarTodo">Borrar TODOS los datos</button>
+
+        <button class="btn ghost" style="margin-top:.8rem" @click="ajustesAbierto = false">Cerrar</button>
+      </div>
+    </div>
+
+    <!-- COBRO MODAL -->
+    <div v-if="cobroModal.activo" class="modal no-print">
+      <div class="modal-box">
+        <div class="modal-title"><icon name="check" :size="20"></icon> Cobrar Venta</div>
+        <div class="cobro-modal">Total: {{ fmt(cobroModal.total) }}</div>
+        <button class="btn ok" @click="procesarVenta" :disabled="procesandoVenta">
+          {{ procesandoVenta ? 'Procesando...' : 'Confirmar Pago' }}
+        </button>
+        <button class="btn ghost" @click="cobroModal.activo = false">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- MODALES DE SOCIOS -->
+    <ModalRetiro />
+    <ModalAporte />
 
     <!-- CONFIRM / PROMPT -->
     <ModalConfirm :activo="confirm.activo" :titulo="confirm.titulo" :msg="confirm.msg" @ok="okConfirm" @cancelar="confirm.activo = false" />
@@ -417,16 +510,11 @@ import SeccionSocios from './components/SeccionSocios.vue';
 import ModalRetiro from './components/ModalRetiro.vue';
 import ModalAporte from './components/ModalAporte.vue';
 import sociosMixin from './mixins/socios.js';
-import telegramMixin from './mixins/telegram.js';
-import notificacionesMixin from './mixins/notificaciones.js';
-import SeccionAjustes from './components/SeccionAjustes.vue';
-import SeccionDashboard from './components/SeccionDashboard.vue';
-import ModalCobro from './components/ModalCobro.vue';
 
 export default {
   name: 'App',
-  mixins: [sociosMixin, telegramMixin, notificacionesMixin],
-  components: { BottomNav, SheetMas, ModalConfirm, ModalPrompt, AppToast, SeccionSocios, ModalRetiro, ModalAporte, SeccionAjustes, SeccionDashboard, ModalCobro },
+  mixins: [sociosMixin],
+  components: { BottomNav, SheetMas, ModalConfirm, ModalPrompt, AppToast, SeccionSocios, ModalRetiro, ModalAporte },
 
   data() {
     return {
@@ -447,19 +535,8 @@ export default {
         capitalInicial: 0,
         periodoInicio: new Date().toISOString(),
         umbralMermaPct: 15,
-        umbralDiasAuditoria: 7,
         stockMinDefault: 500,
-        ultimoBackupAuto: null,
-        notifActivo: false,
-        ultimaNotifStock: null,
-        ultimaNotifAuditoria: null,
-        tgChatId: '',
-        tgNombre: '',
-        tgAutoBackup: false,
-        tgUltimoBackup: null,
-        tgUltimoHash: '',
-        tgFallosConsecutivos: 0,
-        ultimaAuditoria: null
+        ultimoBackupAuto: null
       },
 
       insumos: [],
@@ -517,9 +594,7 @@ export default {
       categoriasInsumo: CATEGORIAS_INSUMO,
 
       _chart: null,
-      _stockCache: null,
-      storagePersistente: false,
-      storageInfo: { uso: 0, cuota: 0, porcentaje: 0 }
+      _stockCache: null
     };
   },
 
@@ -1319,19 +1394,6 @@ export default {
           document.documentElement.setAttribute('data-theme', this.cfg.tema);
         } catch (e) {}
         await this.recargarTodo();
-        // Persistencia de storage
-        await this.pedirPersistenciaStorage();
-        await this.actualizarInfoStorage();
-        // Telegram: estado inicial
-        if (this.cfg.tgChatId) this.tgEstado = 'conectado';
-        else this.tgEstado = 'esperando-start';
-        await this.tgActualizarCola();
-        // Timers de Telegram
-        this.iniciarTgTimers();
-        // Auto-backup y notificaciones
-        setTimeout(() => this.tgAutoBackupCheck(), 5000);
-        this._notifTimer = setInterval(() => this.chequearNotificaciones(), 5 * 60 * 1000);
-        setTimeout(() => this.chequearNotificaciones(), 2000);
         const hash = location.hash.slice(1);
         const valid = ['dashboard','ventas','compras','inventario','bajas','productos','auditoria','caja','gastos','reportes','socios'];
         if (valid.includes(hash)) this.sec = hash;
@@ -1363,11 +1425,6 @@ export default {
     window.addEventListener('online', () => this.online = true);
     window.addEventListener('offline', () => this.online = false);
     window.addEventListener('popstate', e => { this.sec = (e.state && e.state.sec) || 'dashboard'; });
-  },
-
-  beforeUnmount() {
-    this.destroyTgTimers();
-    if (this._notifTimer) clearInterval(this._notifTimer);
   }
 };
 </script>
