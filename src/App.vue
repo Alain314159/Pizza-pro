@@ -93,10 +93,7 @@
       <section v-if="sec === 'compras'" class="fade-up">
         <div class="card">
           <div class="card-title"><icon name="bag" :size="18" color="#D97706"></icon> Registrar Compra de Insumo</div>
-          <select v-model="compraForm.insumoId" @change="selCompraInsumo">
-            <option value="">Seleccionar insumo...</option>
-            <option v-for="i in insumosActivos" :key="i.id" :value="i.id">{{ i.nombre }} ({{ i.unidad }})</option>
-          </select>
+          <SelectInsumo v-model="compraForm.insumoId" @change="selCompraInsumo" />
           <div v-if="compraForm.insumoId">
             <div class="grid2">
               <input v-model="compraForm.pesoBruto" type="number" inputmode="decimal" step="0.01" placeholder="Peso bruto (con envase)">
@@ -213,10 +210,9 @@
               Sin receta definida.
             </div>
             <div v-for="(r, i) in prodForm.receta" :key="i" class="escalon-row">
-              <select v-model="r.insumoId" style="flex:1">
-                <option value="">Insumo...</option>
-                <option v-for="ins in insumosActivos" :key="ins.id" :value="ins.id">{{ ins.nombre }}</option>
-              </select>
+              <div style="flex:1;min-width:0">
+                <SelectInsumo v-model="r.insumoId" placeholder="Insumo..." />
+              </div>
               <input v-model="r.cantidad" type="number" inputmode="decimal" step="0.01" placeholder="Cant." style="width:70px">
               <label style="display:flex;align-items:center;gap:.2rem;font-size:.65rem">
                 <input type="checkbox" v-model="r.fijo" style="width:auto;margin:0"> Fijo
@@ -419,12 +415,13 @@ import telegramMixin from './mixins/telegram.js';
 import notificacionesMixin from './mixins/notificaciones.js';
 import SeccionAjustes from './components/SeccionAjustes.vue';
 import SeccionDashboard from './components/SeccionDashboard.vue';
+import SelectInsumo from './components/SelectInsumo.vue';
 import ModalCobro from './components/ModalCobro.vue';
 
 export default {
   name: 'App',
   mixins: [sociosMixin, telegramMixin, notificacionesMixin],
-  components: { BottomNav, SheetMas, ModalConfirm, ModalPrompt, AppToast, SeccionSocios, ModalRetiro, ModalAporte, SeccionAjustes, SeccionDashboard, ModalCobro },
+  components: { BottomNav, SheetMas, ModalConfirm, ModalPrompt, AppToast, SeccionSocios, ModalRetiro, ModalAporte, SeccionAjustes, SeccionDashboard, ModalCobro, SelectInsumo },
 
   data() {
     return {
