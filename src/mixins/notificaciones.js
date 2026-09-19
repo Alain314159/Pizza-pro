@@ -1,4 +1,5 @@
-import { n, TOAST } from '../db.js';
+import { n } from '../db.js';
+import { TOAST } from '../constants.js';
 
 export default {
   data() {
