@@ -457,7 +457,9 @@ export default {
         tgUltimoBackup: null,
         tgUltimoHash: '',
         tgFallosConsecutivos: 0,
-        ultimaAuditoria: null
+        ultimaAuditoria: null,
+        nombreTienda: '',
+        tiendaConfigurada: false
       },
 
       insumos: [],
@@ -1460,6 +1462,43 @@ export default {
 
 /* FADE UP */
 .fade-up { animation: fadeUp .3s ease-out; }
+
+/* TELEGRAM CONFIG */
+.tg-modo-toggle {
+  display: flex;
+  gap: .35rem;
+  background: var(--bg);
+  border-radius: var(--r-sm);
+  padding: .25rem;
+  margin-bottom: .6rem;
+}
+.tg-modo-toggle button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: .5rem;
+  border-radius: .55rem;
+  font-weight: 700;
+  font-size: .78rem;
+  color: var(--mut);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--tr);
+}
+.tg-modo-toggle button.activo {
+  background: var(--card);
+  color: var(--pri);
+  box-shadow: 0 1px 3px rgba(31,41,55,.08);
+}
+.tg-check-info {
+  font-size: .72rem;
+  padding: .35rem .6rem;
+  border-radius: .5rem;
+  margin: -.3rem 0 .5rem;
+  font-weight: 700;
+}
+.tg-check-info.ok { background: rgba(34,197,94,.12); color: var(--ok-d); }
+.tg-check-info.bad { background: rgba(239,68,68,.12); color: var(--bad-d); }
 
 /* MODO COMPACTO */
 [data-compact="1"] main { padding: .5rem .5rem 6rem; }

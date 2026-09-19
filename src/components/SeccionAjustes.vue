@@ -40,68 +40,117 @@
       <button class="btn ghost" @click="app.triggerImport"><icon name="upload" :size="16" :color="app.txtColor"></icon> Importar datos</button>
 
       <div class="set-group">Backup en Telegram</div>
-      <div v-if="app.tgEstado === 'conectado'" class="tg-conectado">
-        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
-          <div class="tg-dot"></div>
-          <span style="font-size:.8rem"><b>Conectado:</b> {{ app.cfg.tgNombre || app.cfg.tgChatId }}</span>
-        </div>
-        <div style="font-size:.72rem;color:var(--mut);margin-bottom:.6rem">
-          Último backup: {{ app.cfg.tgUltimoBackup ? app.fmtFH(app.cfg.tgUltimoBackup) : 'nunca' }}
-          <span v-if="app.tgColaPendiente > 0" style="color:var(--warn);font-weight:700"> · {{ app.tgColaPendiente }} en cola</span>
-        </div>
-        <div v-if="app.tgProgreso" class="tg-progreso">
-          <div class="tg-spinner"></div>
-          <span>{{ app.tgProgreso }}</span>
-        </div>
-        <div class="set-row">
-          <span class="lbl" style="font-size:.78rem">Backup automático (cada 24h)</span>
-          <label class="switch">
-            <input type="checkbox" v-model="app.cfg.tgAutoBackup" @change="app.guardarCfg">
-            <span class="slider"></span>
-          </label>
-        </div>
-        <div class="grid2" style="margin-top:.6rem">
-          <button class="btn pri" style="margin:0;font-size:.75rem;padding:.6rem" :disabled="app.tgCargando" @click="app.tgBackupAhora">
-            <icon name="upload" :size="14" color="#fff"></icon> Backup ahora
-          </button>
-          <button class="btn ghost" style="margin:0;font-size:.75rem;padding:.6rem" :disabled="app.tgCargando" @click="app.tgListar">
-            <icon name="refresh" :size="14" :color="app.txtColor"></icon> Ver backups
-          </button>
-        </div>
-        <button v-if="app.tgColaPendiente > 0" class="btn warn" style="margin-top:.5rem;font-size:.72rem" @click="app.tgProcesarCola">
-          Procesar {{ app.tgColaPendiente }} en cola
-        </button>
-        <button class="btn ghost" style="margin-top:.5rem;font-size:.72rem" @click="app.tgDesconectar">
-          Desconectar Telegram
-        </button>
 
-        <div v-if="app.tgBackups.length" class="tg-lista">
-          <div style="font-size:.75rem;font-weight:800;margin-bottom:.4rem;color:var(--pri)">Backups disponibles</div>
-          <div v-for="bk in app.tgBackups.slice(0, 10)" :key="bk.messageId" class="tg-bk">
-            <div style="flex:1;min-width:0">
-              <div style="font-size:.78rem;font-weight:700">{{ app.fmtFH(bk.fecha) }}</div>
-              <div style="font-size:.68rem;color:var(--mut)">{{ (bk.fileSize/1024).toFixed(1) }} KB</div>
-            </div>
-            <button class="icon-btn ok" @click="app.tgRestaurar(bk)">
-              <icon name="download" :size="14" color="#16a34a"></icon>
-            </button>
-            <button class="icon-btn bad" @click="app.tgEliminar(bk)">
-              <icon name="trash" :size="14" color="#dc2626"></icon>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div v-else>
-        <div v-if="app.tgEstado === 'esperando-start'" class="info-box" style="background:rgba(217,119,6,.08);border-color:var(--pri);font-size:.78rem">
-          <b>Esperando conexión...</b><br>
-          Abre Telegram, busca el bot y envíale <b>/start</b>. La app lo detecta en 5 segundos.
-        </div>
-        <div v-else-if="app.tgEstado === 'error'" class="info-box" style="background:rgba(239,68,68,.1);color:var(--bad);border-color:var(--bad);font-size:.78rem">
+      <!-- ESTADO 1: Sin chat detectado -->
+      <div v-if="!app.cfg.tgChatId">
+        <div v-if="app.tgEstado === 'error'" class="info-box" style="background:rgba(239,68,68,.1);color:var(--bad);border-color:var(--bad);font-size:.78rem">
           Error de conexión. Verifica que el bot esté activo.
+        </div>
+        <div v-else class="info-box" style="background:rgba(217,119,6,.08);border-color:var(--pri);font-size:.78rem">
+          <b>Esperando conexión...</b><br>
+          Abre Telegram, busca <b>@pizza_pro_backup_bot</b> y envíale <b>/start</b>.
+          La app lo detecta en 5 segundos.
         </div>
         <button class="btn ghost" style="font-size:.72rem" @click="app.tgAutoDetectarChat">
           <icon name="refresh" :size="14" :color="app.txtColor"></icon> Buscar ahora
+        </button>
+      </div>
+
+      <!-- ESTADO 2: Chat OK pero sin tienda configurada -->
+      <div v-else-if="!app.cfg.tiendaConfigurada">
+        <div class="info-box" style="background:rgba(217,119,6,.08);border-color:var(--pri);font-size:.78rem">
+          <b>Chat conectado:</b> {{ app.cfg.tgNombre || app.cfg.tgChatId }}<br>
+          Registra un nombre único para tu tienda. Este nombre identifica tus backups en Telegram.
+        </div>
+
+        <div class="tg-modo-toggle">
+          <button :class="{ activo: app.tgForm.modo === 'register' }" @click="app.tgForm.modo = 'register'">Registrar nueva</button>
+          <button :class="{ activo: app.tgForm.modo === 'login' }" @click="app.tgForm.modo = 'login'">Ya tengo una</button>
+        </div>
+
+        <div v-if="app.tgForm.modo === 'register'">
+          <input v-model="app.tgForm.nombre" type="text" placeholder="Nombre único (ej: mi-pizzeria)" @input="app.verificarNombreTienda()" autocomplete="off">
+          <div v-if="app.tgCheck.estado === 'verificando'" class="tg-check-info">Verificando...</div>
+          <div v-else-if="app.tgCheck.estado === 'ok'" class="tg-check-info ok">✓ Disponible</div>
+          <div v-else-if="app.tgCheck.estado === 'ocupado'" class="tg-check-info bad">✗ {{ app.tgCheck.motivo }}</div>
+          <div v-else-if="app.tgCheck.estado === 'error'" class="tg-check-info bad">Error: {{ app.tgCheck.motivo }}</div>
+
+          <input v-model="app.tgForm.password" type="password" placeholder="Contraseña (mín. 4 caracteres)" autocomplete="new-password">
+          <input v-model="app.tgForm.password2" type="password" placeholder="Repetir contraseña" autocomplete="new-password">
+          <div v-if="app.tgForm.password && app.tgForm.password2 && !app.passwordsMatch" class="tg-check-info bad">Las contraseñas no coinciden</div>
+
+          <button class="btn pri" :disabled="!app.puedoRegistrar" @click="app.registrarTienda()">
+            {{ app.tgProcesando ? 'Registrando...' : 'Registrar Tienda' }}
+          </button>
+        </div>
+
+        <div v-else>
+          <input v-model="app.tgForm.loginNombre" type="text" placeholder="Nombre de tienda existente" autocomplete="off">
+          <input v-model="app.tgForm.loginPassword" type="password" placeholder="Contraseña" autocomplete="current-password">
+          <button class="btn pri" :disabled="app.tgProcesando" @click="app.loginTienda()">
+            {{ app.tgProcesando ? 'Conectando...' : 'Iniciar Sesión' }}
+          </button>
+        </div>
+
+        <button class="btn ghost" style="margin-top:.5rem;font-size:.72rem" @click="app.tgDesconectar">
+          Desconectar Telegram
+        </button>
+      </div>
+
+      <!-- ESTADO 3: Todo OK -->
+      <div v-else>
+        <div class="tg-conectado">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+            <div class="tg-dot"></div>
+            <span style="font-size:.8rem"><b>{{ app.cfg.nombreTienda }}</b></span>
+          </div>
+          <div style="font-size:.72rem;color:var(--mut);margin-bottom:.6rem">
+            Chat: {{ app.cfg.tgNombre || app.cfg.tgChatId }}<br>
+            Último backup: {{ app.cfg.tgUltimoBackup ? app.fmtFH(app.cfg.tgUltimoBackup) : 'nunca' }}
+            <span v-if="app.tgColaPendiente > 0" style="color:var(--warn);font-weight:700"> · {{ app.tgColaPendiente }} en cola</span>
+          </div>
+          <div v-if="app.tgProgreso" class="tg-progreso">
+            <div class="tg-spinner"></div>
+            <span>{{ app.tgProgreso }}</span>
+          </div>
+          <div class="set-row">
+            <span class="lbl" style="font-size:.78rem">Backup automático (cada 24h)</span>
+            <label class="switch">
+              <input type="checkbox" v-model="app.cfg.tgAutoBackup" @change="app.guardarCfg">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="grid2" style="margin-top:.6rem">
+            <button class="btn pri" style="margin:0;font-size:.75rem;padding:.6rem" :disabled="app.tgCargando" @click="app.tgBackupAhora">
+              <icon name="upload" :size="14" color="#fff"></icon> Backup ahora
+            </button>
+            <button class="btn ghost" style="margin:0;font-size:.75rem;padding:.6rem" :disabled="app.tgCargando" @click="app.tgListar">
+              <icon name="refresh" :size="14" :color="app.txtColor"></icon> Ver backups
+            </button>
+          </div>
+          <button v-if="app.tgColaPendiente > 0" class="btn warn" style="margin-top:.5rem;font-size:.72rem" @click="app.tgProcesarCola">
+            Procesar {{ app.tgColaPendiente }} en cola
+          </button>
+
+          <div v-if="app.tgBackups.length" class="tg-lista">
+            <div style="font-size:.75rem;font-weight:800;margin-bottom:.4rem;color:var(--pri)">Backups disponibles</div>
+            <div v-for="bk in app.tgBackups.slice(0, 10)" :key="bk.messageId" class="tg-bk">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:.78rem;font-weight:700">{{ app.fmtFH(bk.fecha) }}</div>
+                <div style="font-size:.68rem;color:var(--mut)">{{ (bk.fileSize/1024).toFixed(1) }} KB</div>
+              </div>
+              <button class="icon-btn ok" @click="app.tgRestaurar(bk)">
+                <icon name="download" :size="14" color="#16a34a"></icon>
+              </button>
+              <button class="icon-btn bad" @click="app.tgEliminar(bk)">
+                <icon name="trash" :size="14" color="#dc2626"></icon>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn ghost" style="margin-top:.5rem;font-size:.72rem" @click="app.tgDesconectar">
+          Desconectar Telegram
         </button>
       </div>
 

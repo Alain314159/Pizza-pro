@@ -1,4 +1,4 @@
-// Cliente Telegram via proxy (Cloudflare Worker).
+// Cliente Telegram v3 via proxy (Cloudflare Worker).
 // El token del bot NUNCA se incluye en el bundle.
 
 export const TG_PROXY_URL = 'https://pizza-proxy.tienda-ul5r2q.workers.dev';
@@ -16,33 +16,86 @@ async function tgJson(path, opts) {
   let d;
   try { d = JSON.parse(text); }
   catch (e) { throw new Error('Respuesta no-JSON del proxy: ' + text.slice(0, 120)); }
-  if (!d.ok) throw new Error(d.description || 'Error de Telegram');
-  return d.result;
+  if (!d.ok) throw new Error(d.description || 'Error del proxy');
+  return d;
 }
 
+// ═══ BOT BASICO ═══
+
 export async function tgGetMe() {
-  return tgJson('/api/tg/getMe', { method: 'GET', headers: proxyHeaders() });
+  const d = await tgJson('/api/tg/getMe', { method: 'GET', headers: proxyHeaders() });
+  return d.result;
 }
 
 export async function tgGetUpdates(offset) {
   const q = '?limit=100' + (offset ? '&offset=' + offset : '');
-  return tgJson('/api/tg/getUpdates' + q, { method: 'GET', headers: proxyHeaders() });
+  const d = await tgJson('/api/tg/getUpdates' + q, { method: 'GET', headers: proxyHeaders() });
+  return d.result;
 }
 
-export async function tgSendDocument(chatId, blob, filename, caption) {
+// ═══ TIENDA (nombre unico + password) ═══
+
+export async function tgCheckName(nombre) {
+  return tgJson('/api/checkName?nombre=' + encodeURIComponent(nombre), {
+    method: 'GET',
+    headers: proxyHeaders()
+  });
+}
+
+export async function tgRegister(nombre, password, chatId) {
+  return tgJson('/api/register', {
+    method: 'POST',
+    headers: proxyHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ nombre, password, chatId: String(chatId) })
+  });
+}
+
+export async function tgLogin(nombre, password, chatId) {
+  return tgJson('/api/login', {
+    method: 'POST',
+    headers: proxyHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ nombre, password, chatId: String(chatId) })
+  });
+}
+
+export async function tgStatus(chatId) {
+  return tgJson('/api/status?chatId=' + encodeURIComponent(chatId), {
+    method: 'GET',
+    headers: proxyHeaders()
+  });
+}
+
+// ═══ BACKUPS ═══
+
+export async function tgListBackups(chatId, nombre) {
+  const d = await tgJson('/api/tg/listBackups?chatId=' + encodeURIComponent(chatId) + '&nombre=' + encodeURIComponent(nombre), {
+    method: 'GET',
+    headers: proxyHeaders()
+  });
+  return d.result || [];
+}
+
+export async function tgSendDocument(chatId, nombre, blob, caption) {
   const form = new FormData();
-  form.append('chat_id', chatId);
-  form.append('document', blob, filename);
+  form.append('chat_id', String(chatId));
+  form.append('nombre', nombre);
+  form.append('document', blob, 'backup.json.gz');
   if (caption) form.append('caption', caption);
-  return tgJson('/api/tg/sendDocument', { method: 'POST', headers: proxyHeaders(), body: form });
+  const d = await tgJson('/api/tg/sendDocument', {
+    method: 'POST',
+    headers: proxyHeaders(),
+    body: form
+  });
+  return d.result;
 }
 
 export async function tgGetFile(fileId) {
-  return tgJson('/api/tg/getFile', {
+  const d = await tgJson('/api/tg/getFile', {
     method: 'POST',
     headers: proxyHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ file_id: fileId })
   });
+  return d.result;
 }
 
 export function tgFileUrl(filePath) {
@@ -51,13 +104,16 @@ export function tgFileUrl(filePath) {
 
 export async function tgDeleteMessage(chatId, messageId) {
   try {
-    return await tgJson('/api/tg/deleteMessage', {
+    const d = await tgJson('/api/tg/deleteMessage', {
       method: 'POST',
       headers: proxyHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ chat_id: chatId, message_id: messageId })
+      body: JSON.stringify({ chat_id: String(chatId), message_id: messageId })
     });
+    return d.ok;
   } catch (e) { return false; }
 }
+
+// ═══ UTIL ═══
 
 export function tgDetectarChatId(updates) {
   for (let i = updates.length - 1; i >= 0; i--) {
@@ -72,23 +128,4 @@ export function tgDetectarChatId(updates) {
     }
   }
   return null;
-}
-
-export function tgExtraerBackups(updates) {
-  const out = [];
-  updates.forEach(u => {
-    const msg = u.message || u.channel_post;
-    if (!msg || !msg.document) return;
-    const doc = msg.document;
-    if (!doc.file_name || !doc.file_name.startsWith('pizzeria-backup-')) return;
-    out.push({
-      fileId: doc.file_id,
-      fileName: doc.file_name,
-      fileSize: doc.file_size || 0,
-      fecha: new Date(msg.date * 1000).toISOString(),
-      messageId: msg.message_id,
-      caption: msg.caption || ''
-    });
-  });
-  return out.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 }

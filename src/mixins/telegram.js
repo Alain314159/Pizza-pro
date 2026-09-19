@@ -1,5 +1,5 @@
 import { db, n, m, genId, clean, P, buildData, fmtFH } from '../db.js';
-import { tgGetMe, tgGetUpdates, tgSendDocument, tgGetFile, tgFileUrl, tgDeleteMessage, tgDetectarChatId, tgExtraerBackups } from '../telegram.js';
+import { tgGetMe, tgGetUpdates, tgCheckName, tgRegister, tgLogin, tgStatus, tgListBackups, tgSendDocument, tgGetFile, tgFileUrl, tgDeleteMessage, tgDetectarChatId } from '../telegram.js';
 import { TOAST } from '../constants.js';
 
 export default {
@@ -10,10 +10,25 @@ export default {
       tgCargando: false,
       tgProgreso: '',
       tgColaPendiente: 0,
+      tgForm: { nombre: '', password: '', password2: '', modo: 'register', loginNombre: '', loginPassword: '' },
+      tgCheck: { estado: 'idle', motivo: '', verificando: false },
+      tgProcesando: false,
       _tgPollTimer: null,
       _tgColaTimer: null,
       _tgProcesandoCola: false
     };
+  },
+
+  computed: {
+    passwordsMatch() {
+      return this.tgForm.password && this.tgForm.password === this.tgForm.password2;
+    },
+    puedoRegistrar() {
+      return this.tgCheck.estado === 'ok'
+        && this.passwordsMatch
+        && (this.tgForm.password || '').length >= 4
+        && !this.tgProcesando;
+    }
   },
 
   methods: {
@@ -84,6 +99,7 @@ export default {
           this.cfg.tgAutoBackup = true;
           await this.guardarCfg();
           this.tgEstado = 'conectado';
+          try { await this.tgCargarEstadoTienda(); } catch (e) {}
           this.toastMsg('Telegram conectado: ' + this.cfg.tgNombre);
           return true;
         }
@@ -96,6 +112,9 @@ export default {
     },
 
     async tgBackupAhora() {
+      if (!this.cfg.tiendaConfigurada || !this.cfg.nombreTienda) {
+        return this.toastMsg('Configura un nombre de tienda antes de hacer backups', TOAST.BAD);
+      }
       const data = buildData(this);
       try {
         await this.tgEnviarDatos(data, 'manual', true);
@@ -124,7 +143,7 @@ export default {
         const fileName = 'pizzeria-backup-' + fecha.split('T')[0] + '-' + Date.now().toString(36) + '.json.gz';
         const resumen = data.productos.length + ' prod · ' + data.ventas.length + ' ventas · ' + (blobSinComprimir.size / 1024).toFixed(1) + ' KB';
         this.tgProgreso = 'Subiendo...';
-        await tgSendDocument(chatId, gz, fileName, 'Backup · ' + resumen);
+        await tgSendDocument(chatId, this.cfg.nombreTienda, gz, 'Backup · ' + resumen);
         this.cfg.tgUltimoBackup = fecha;
         this.cfg.tgUltimoHash = hash;
         await this.guardarCfg();
@@ -138,11 +157,12 @@ export default {
     },
 
     async tgListar() {
-      if (!this.tgTokenActual()) return;
+      if (!this.cfg.tiendaConfigurada || !this.cfg.nombreTienda) {
+        return this.toastMsg('Configura un nombre de tienda primero', TOAST.WARN);
+      }
       this.tgCargando = true;
       try {
-        const updates = await tgGetUpdates();
-        this.tgBackups = tgExtraerBackups(updates);
+        this.tgBackups = await tgListBackups(this.cfg.tgChatId, this.cfg.nombreTienda);
         this.toastMsg(this.tgBackups.length + ' backup(s)');
       } catch (e) { this.toastMsg('Error: ' + e.message, TOAST.BAD); }
       finally { this.tgCargando = false; }
@@ -209,6 +229,8 @@ export default {
           this.cfg.tgChatId = '';
           this.cfg.tgNombre = '';
           this.cfg.tgAutoBackup = false;
+          this.cfg.nombreTienda = '';
+          this.cfg.tiendaConfigurada = false;
           await this.guardarCfg();
           this.tgEstado = 'sin-config';
           this.tgBackups = [];
@@ -217,9 +239,82 @@ export default {
       };
     },
 
+    // ═══ CONFIGURACION DE TIENDA ═══
+
+    async verificarNombreTienda() {
+      const nombre = (this.tgForm.nombre || '').toLowerCase().trim();
+      if (!nombre || nombre.length < 3) {
+        this.tgCheck = { estado: 'idle', motivo: '', verificando: false };
+        return;
+      }
+      this.tgCheck = { estado: 'verificando', motivo: '', verificando: true };
+      try {
+        const r = await tgCheckName(nombre);
+        if (r.disponible) this.tgCheck = { estado: 'ok', motivo: '', verificando: false };
+        else this.tgCheck = { estado: 'ocupado', motivo: r.motivo || 'Nombre ya en uso', verificando: false };
+      } catch (e) {
+        this.tgCheck = { estado: 'error', motivo: e.message, verificando: false };
+      }
+    },
+
+    async registrarTienda() {
+      if (!this.puedoRegistrar) return;
+      if (!this.cfg.tgChatId) return this.toastMsg('Primero conecta el bot con /start', TOAST.BAD);
+      this.tgProcesando = true;
+      try {
+        const r = await tgRegister(this.tgForm.nombre.toLowerCase().trim(), this.tgForm.password, this.cfg.tgChatId);
+        this.cfg.nombreTienda = r.nombre;
+        this.cfg.tiendaConfigurada = true;
+        this.cfg.tgAutoBackup = true;
+        await this.guardarCfg();
+        this.tgForm = { nombre: '', password: '', password2: '', modo: 'register', loginNombre: '', loginPassword: '' };
+        this.tgCheck = { estado: 'idle', motivo: '', verificando: false };
+        this.toastMsg('Tienda registrada correctamente');
+        await this.tgListar();
+      } catch (e) {
+        this.toastMsg(e.message, TOAST.BAD);
+      } finally { this.tgProcesando = false; }
+    },
+
+    async loginTienda() {
+      if (!this.tgForm.loginNombre || !this.tgForm.loginPassword) {
+        return this.toastMsg('Completa nombre y contraseña', TOAST.BAD);
+      }
+      if (!this.cfg.tgChatId) return this.toastMsg('Primero conecta el bot con /start', TOAST.BAD);
+      this.tgProcesando = true;
+      try {
+        const r = await tgLogin(this.tgForm.loginNombre.toLowerCase().trim(), this.tgForm.loginPassword, this.cfg.tgChatId);
+        this.cfg.nombreTienda = r.nombre;
+        this.cfg.tiendaConfigurada = true;
+        this.cfg.tgAutoBackup = true;
+        await this.guardarCfg();
+        this.tgForm = { nombre: '', password: '', password2: '', modo: 'register', loginNombre: '', loginPassword: '' };
+        this.toastMsg('Sesion iniciada');
+        await this.tgListar();
+      } catch (e) {
+        this.toastMsg(e.message, TOAST.BAD);
+      } finally { this.tgProcesando = false; }
+    },
+
+    async tgCargarEstadoTienda() {
+      if (!this.cfg.tgChatId) return;
+      try {
+        const r = await tgStatus(this.cfg.tgChatId);
+        if (r.nombre) {
+          this.cfg.nombreTienda = r.nombre;
+          this.cfg.tiendaConfigurada = true;
+          await this.guardarCfg();
+        } else {
+          this.cfg.tiendaConfigurada = false;
+          this.cfg.nombreTienda = '';
+        }
+      } catch (e) { /* silencioso */ }
+    },
+
     async tgAutoBackupCheck() {
       try { await this.tgProcesarCola(); } catch (e) {}
       if (!this.cfg.tgAutoBackup || !this.cfg.tgChatId) return;
+      if (!this.cfg.tiendaConfigurada || !this.cfg.nombreTienda) return;
       const ult = this.cfg.tgUltimoBackup ? new Date(this.cfg.tgUltimoBackup).getTime() : 0;
       const horas = (Date.now() - ult) / 3600000;
       if (horas >= 24) {
